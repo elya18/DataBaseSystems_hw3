@@ -35,7 +35,6 @@ def query_1(season, year, min_revenue: int):
                 SELECT g.genre_name, AVG(r.movie_popularity) AS avg_popularity, SUM(f.revenue) AS total_revenue
                 FROM Movies m
                 JOIN Seasons s ON MONTH(m.release_date) = s.month
-                JOIN Reviews r ON r.movie_id = m.movie_id
                 JOIN Genres g ON m.movie_id = g.movie_id
                 JOIN Movies_Finance f ON m.movie_id = f.movie_id
                 WHERE s.season = '{season}'
@@ -48,17 +47,52 @@ def query_1(season, year, min_revenue: int):
     return query
 
 
+def query_2(primary_actor: str):
+    if not primary_actor:
+        print("Input cannot be empty")
+        return
+    primary_actor = sanitize_input(primary_actor)
+    query = f"""
+                SELECT a2.actor_name AS secondary_actor, COUNT(*) AS movies_together
+                FROM Movies m
+                JOIN MoviesCast mc1 ON m.movie_id = mc1.movie_id
+                JOIN MoviesCast mc2 ON m.movie_id = mc2.movie_id
+                JOIN Actors a1 ON mc1.actor_id = a1.actor_id
+                JOIN Actors a2 ON mc2.actor_id = a2.actor_id
+                WHERE a1.actor_name = '{primary_actor}' 
+                  AND a2.actor_name != '{primary_actor}'
+                GROUP BY a2.actor_name
+                ORDER BY movies_together DESC
+                LIMIT 1
+            """
+    return query
+
+
 def query_3(movie_name: str):
     if not movie_name:
         print("Input cannot be empty")
         return
     movie_name = movie_name.lower()
     query = f"""
-                SELECT Movies.title, Movies.rank, Movies.overview, Movies.runtime, Movies.is_on_Netflix as Netflix, 
-                Movies.is_on_AppleTV as AppleTV, Movies.is_on_AmazonPrime as AmazonPrime
-                From Movies
-                WHERE MATCH(Movies.title) AGAINST('{movie_name}' in natural language mode)
-                ORDER BY Movies.rank DESC"""
+                SELECT 
+                m.title, 
+                m.rank, 
+                m.overview, 
+                m.runtime, 
+                GROUP_CONCAT(ss.streaming_service) AS Available_On
+                FROM 
+                Movies m
+                LEFT JOIN 
+                Streaming_Service ss 
+                ON 
+                m.movie_id = ss.movie_id
+                WHERE 
+                MATCH(m.title) AGAINST('{movie_name}' IN NATURAL LANGUAGE MODE)
+                GROUP BY 
+                m.movie_id
+                ORDER BY 
+                m.rank DESC;
+                """
     return query
 
 
@@ -66,49 +100,32 @@ def query_4(ranking: int):
     if not isinstance(ranking, int) and not isinstance(ranking, float):
         print("invalid ranking input")
         return
-    if(ranking < 0 or ranking > 10):
+    if ranking < 0 or ranking > 10:
         print("invalid ranking input - please enter ranking between 0 and 10")
         return
-    query = """
+    
+    query = f"""
                 WITH filtered_movies AS (
-                SELECT movie_id, is_on_Netflix,is_on_AppleTV,is_on_AmazonPrime
+                SELECT movie_id
                 FROM Movies
-                WHERE rank >= %s
+                WHERE rank >= {ranking}
                 ),
-                Netflix AS (
-                SELECT COUNT(movie_id) AS Number_of_Unique_Movies
-                FROM filtered_movies
-                WHERE is_on_Netflix = 1 AND is_on_AppleTV = 0 AND is_on_AmazonPrime = 0
-                ),
-                AppleTV AS (
-                SELECT COUNT(movie_id) AS Number_of_Unique_Movies
-                FROM filtered_movies
-                WHERE is_on_AppleTV = 1 AND is_on_Netflix = 0 AND is_on_AmazonPrime = 0
-                ),
-                AmazonPrime AS (
-                SELECT COUNT(movie_id) AS Number_of_Unique_Movies
-                FROM filtered_movies
-                WHERE is_on_AmazonPrime = 1 AND is_on_Netflix = 0 AND is_on_AppleTV = 0
+                platform_counts AS (
+                SELECT 
+                ss.streaming_service, 
+                COUNT(DISTINCT fm.movie_id) AS Number_of_Unique_Movies
+                FROM filtered_movies fm
+                JOIN Streaming_Service ss
+                ON fm.movie_id = ss.movie_id
+                GROUP BY ss.streaming_service
                 )
-                SELECT Streaming_Service, Number_of_Unique_Movies
-                FROM (
-                SELECT 'Netflix' AS Streaming_Service, Number_of_Unique_Movies FROM Netflix
-                UNION ALL
-                SELECT 'AppleTV' AS Streaming_Service, Number_of_Unique_Movies FROM AppleTV
-                UNION ALL
-                SELECT 'AmazonPrime' AS Streaming_Service, Number_of_Unique_Movies FROM AmazonPrime
-                ) AS streaming_counts
-                WHERE Number_of_Unique_Movies >= ALL (
-                SELECT MAX(max_count)
-                FROM (
-                SELECT MAX(Number_of_Unique_Movies) AS max_count FROM Netflix
-                UNION ALL
-                SELECT MAX(Number_of_Unique_Movies) AS max_count FROM AppleTV
-                UNION ALL
-                SELECT MAX(Number_of_Unique_Movies) AS max_count FROM AmazonPrime
-                ) AS max_counts
+                SELECT streaming_service, Number_of_Unique_Movies
+                FROM platform_counts
+                WHERE Number_of_Unique_Movies = (
+                SELECT MAX(Number_of_Unique_Movies)
+                FROM platform_counts
                 );
-            """
+                """
     return query
 
 
@@ -116,16 +133,15 @@ def query_5(free_text: str, genre: str, date: str, runtime: str):
     if not free_text or not genre or not date or not runtime:
         print("Input cannot be empty")
         return
-    query = f"""select Movies.title, Movies.overview, MoviesFinance.revenue, Reviews.vote_average
+    query = f"""select Movies.title, Movies.overview, MoviesFinance.revenue, Movies.vote_average
                 from Movies m
                 join Genres g
                 on m.movie_id = g.movie_id
                 join MoviesFinance f
                 on m.movie_id = f.movie_id
-                join Reviews re
-                on m.movie_id = re.movie_id
                 where MATCH(m.overview) AGAINST ('{free_text}' in natural language mode)
                     and MATCH(g.genre_name) AGAINST ('{genre}' in natural language mode)
                     and m.release_date >= '{date}'
                     and m.runtime > {runtime}"""
     return query
+
