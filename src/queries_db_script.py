@@ -35,14 +35,14 @@ def query_1(season, year, min_revenue: int):
                 SELECT g.genre_name, AVG(r.movie_popularity) AS avg_popularity, SUM(f.revenue) AS total_revenue
                 FROM Movies m
                 JOIN Seasons s ON MONTH(m.release_date) = s.month
-                JOIN Genres g ON m.movie_id = g.movie_id
-                JOIN Movies_Finance f ON m.movie_id = f.movie_id
+                JOIN MovieGenres g ON m.movie_id = g.movie_id
+                JOIN MovieFinances f ON m.movie_id = f.movie_id
                 WHERE s.season = '{season}'
                   AND YEAR(m.release_date) = '{year}'
                   AND f.revenue >= {min_revenue}
                 GROUP BY g.genre_name
                 ORDER BY avg_popularity DESC
-                LIMIT 10
+                LIMIT 5
             """
     return query
 
@@ -63,7 +63,7 @@ def query_2(primary_actor: str):
                   AND a2.actor_name != '{primary_actor}'
                 GROUP BY a2.actor_name
                 ORDER BY movies_together DESC
-                LIMIT 1
+                LIMIT 2
             """
     return query
 
@@ -79,13 +79,13 @@ def query_3(movie_name: str):
                 m.rank, 
                 m.overview, 
                 m.runtime, 
-                GROUP_CONCAT(ss.streaming_service) AS Available_On
+                GROUP_CONCAT(mp.streaming_service) AS Available_On
                 FROM 
                 Movies m
                 LEFT JOIN 
-                Streaming_Service ss 
+                MovieProviders mp 
                 ON 
-                m.movie_id = ss.movie_id
+                m.movie_id = mp.movie_id
                 WHERE 
                 MATCH(m.title) AGAINST('{movie_name}' IN NATURAL LANGUAGE MODE)
                 GROUP BY 
@@ -112,12 +112,12 @@ def query_4(ranking: int):
                 ),
                 platform_counts AS (
                 SELECT 
-                ss.streaming_service, 
+                mp.streaming_service, 
                 COUNT(DISTINCT fm.movie_id) AS Number_of_Unique_Movies
                 FROM filtered_movies fm
-                JOIN Streaming_Service ss
-                ON fm.movie_id = ss.movie_id
-                GROUP BY ss.streaming_service
+                JOIN MovieProviders mp
+                ON fm.movie_id = mp.movie_id
+                GROUP BY mp.streaming_service
                 )
                 SELECT streaming_service, Number_of_Unique_Movies
                 FROM platform_counts
@@ -135,7 +135,7 @@ def query_5(free_text: str, genre: str, date: str, runtime: str):
         return
     query = f"""select Movies.title, Movies.overview, MoviesFinance.revenue, Movies.vote_average
                 from Movies m
-                join Genres g
+                join MovieGenres g
                 on m.movie_id = g.movie_id
                 join MoviesFinance f
                 on m.movie_id = f.movie_id
