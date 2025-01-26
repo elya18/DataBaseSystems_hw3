@@ -5,6 +5,7 @@ def sanitize_input(input_string):
     return sanitized_string
 
 
+
 def query_1(season, year, min_revenue: int):
     query = f"""
                 WITH Seasons AS (
@@ -55,10 +56,10 @@ def query_2(primary_actor: str):
     query = f"""
                 SELECT a2.actor_name AS secondary_actor, COUNT(*) AS movies_together
                 FROM Movies m
-                JOIN MoviesCast mc1 ON m.movie_id = mc1.movie_id
-                JOIN MoviesCast mc2 ON m.movie_id = mc2.movie_id
-                JOIN Actors a1 ON mc1.actor_id = a1.actor_id
-                JOIN Actors a2 ON mc2.actor_id = a2.actor_id
+                JOIN MovieActors ma1 ON m.movie_id = ma1.movie_id
+                JOIN MovieActors ma2 ON m.movie_id = ma2.movie_id
+                JOIN Actors a1 ON ma1.actor_id = a1.actor_id
+                JOIN Actors a2 ON ma2.actor_id = a2.actor_id
                 WHERE a1.actor_name = '{primary_actor}' 
                   AND a2.actor_name != '{primary_actor}'
                 GROUP BY a2.actor_name
@@ -144,4 +145,3 @@ def query_5(free_text: str, genre: str, date: str, runtime: str):
                     and m.release_date >= '{date}'
                     and m.runtime > {runtime}"""
     return query
-
