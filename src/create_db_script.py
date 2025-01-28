@@ -142,6 +142,3 @@ def create_all_tables():
     create_MovieActors(connection)
     create_MovieProviders(connection)
     connection.close()
-
-if __name__ == "__main__":
-    create_all_tables()
