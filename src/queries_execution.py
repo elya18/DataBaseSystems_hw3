@@ -87,3 +87,4 @@ if __name__ == '__main__':
     run_examples_for_query_3(cursor)
     #run_examples_for_query_4(cursor)
     run_examples_for_query_5(cursor)
+    connection.close()
