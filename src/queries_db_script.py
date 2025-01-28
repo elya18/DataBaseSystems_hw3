@@ -109,24 +109,18 @@ def query_4(ranking: int):
     query = f"""
                 WITH filtered_movies AS (
                 SELECT movie_id
-                FROM Movies
-                WHERE rank >= {ranking}
-                ),
-                platform_counts AS (
+                FROM idorosiner.Movies
+                WHERE vote_average >= {ranking}                
+                )
                 SELECT 
-                mp.streaming_service, 
+                mp.provider_name, 
                 COUNT(DISTINCT fm.movie_id) AS Number_of_Unique_Movies
                 FROM filtered_movies fm
-                JOIN MovieProviders mp
+                JOIN idorosiner.MovieProviders mp
                 ON fm.movie_id = mp.movie_id
-                GROUP BY mp.streaming_service
-                )
-                SELECT streaming_service, Number_of_Unique_Movies
-                FROM platform_counts
-                WHERE Number_of_Unique_Movies = (
-                SELECT MAX(Number_of_Unique_Movies)
-                FROM platform_counts
-                );
+                GROUP BY mp.provider_name
+                ORDER BY COUNT(DISTINCT fm.movie_id) DESC
+                LIMIT 1;
                 """
     return query
 
