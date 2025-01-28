@@ -33,18 +33,19 @@ def query_1(season, year, min_revenue: int):
                     UNION ALL
                     SELECT 'winter', 12
                 )
-                SELECT g.genre_name, AVG(r.movie_popularity) AS avg_popularity, SUM(f.revenue) AS total_revenue
-                FROM Movies m
+                SELECT g.genre_name, AVG(m.movie_popularity) AS avg_popularity, SUM(f.revenue) AS total_revenue
+                FROM idorosiner.Movies m
                 JOIN Seasons s ON MONTH(m.release_date) = s.month
-                JOIN MovieGenres g ON m.movie_id = g.movie_id
-                JOIN MovieFinances f ON m.movie_id = f.movie_id
+                JOIN idorosiner.MovieGenres g ON m.movie_id = g.movie_id
+                JOIN idorosiner.MovieFinances f ON m.movie_id = f.movie_id
                 WHERE s.season = '{season}'
-                  AND YEAR(m.release_date) = '{year}'
-                  AND f.revenue >= {min_revenue}
+                AND YEAR(m.release_date) = {year}
+                AND f.revenue >= {min_revenue}
                 GROUP BY g.genre_name
                 ORDER BY avg_popularity DESC
                 LIMIT 5
             """
+  
     return query
 
 
@@ -77,22 +78,22 @@ def query_3(movie_name: str):
     query = f"""
                 SELECT 
                 m.title, 
-                m.rank, 
+                m.vote_average, 
                 m.overview, 
                 m.runtime, 
-                GROUP_CONCAT(mp.streaming_service) AS Available_On
+                GROUP_CONCAT(mp.provider_name) AS Available_On
                 FROM 
-                Movies m
+                idorosiner.Movies m
                 LEFT JOIN 
-                MovieProviders mp 
+                idorosiner.MovieProviders mp 
                 ON 
                 m.movie_id = mp.movie_id
                 WHERE 
-                MATCH(m.title) AGAINST('{movie_name}' IN NATURAL LANGUAGE MODE)
+                MATCH(m.title) AGAINST('Inception' IN NATURAL LANGUAGE MODE)
                 GROUP BY 
                 m.movie_id
                 ORDER BY 
-                m.rank DESC;
+                m.vote_average DESC;
                 """
     return query
 
@@ -134,14 +135,17 @@ def query_5(free_text: str, genre: str, date: str, runtime: str):
     if not free_text or not genre or not date or not runtime:
         print("Input cannot be empty")
         return
-    query = f"""select Movies.title, Movies.overview, MoviesFinance.revenue, Movies.vote_average
-                from Movies m
-                join MovieGenres g
+    query = f"""
+                select m.title, m.overview, f.revenue, m.vote_average, g.genre_name, m.release_date, m.runtime
+                from idorosiner.Movies m
+                join idorosiner.MovieGenres g
                 on m.movie_id = g.movie_id
-                join MoviesFinance f
+                join idorosiner.MovieFinances f
                 on m.movie_id = f.movie_id
                 where MATCH(m.overview) AGAINST ('{free_text}' in natural language mode)
-                    and MATCH(g.genre_name) AGAINST ('{genre}' in natural language mode)
-                    and m.release_date >= '{date}'
-                    and m.runtime > {runtime}"""
+                    and g.genre_name = '{genre}' 
+                    and m.release_date >= {date}
+                    and m.runtime > {runtime} """                
+                    
+                    
     return query
