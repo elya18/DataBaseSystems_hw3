@@ -9,43 +9,32 @@ def sanitize_input(input_string):
 def query_1(season, year, min_revenue: int):
     query = f"""
                 WITH Seasons AS (
-                    SELECT 'winter' AS season, 1 AS month
-                    UNION ALL
-                    SELECT 'winter', 2
-                    UNION ALL
-                    SELECT 'spring', 3
-                    UNION ALL
-                    SELECT 'spring', 4
-                    UNION ALL
-                    SELECT 'spring', 5
-                    UNION ALL
-                    SELECT 'summer', 6
-                    UNION ALL
-                    SELECT 'summer', 7
-                    UNION ALL
-                    SELECT 'summer', 8
-                    UNION ALL
-                    SELECT 'fall', 9
-                    UNION ALL
-                    SELECT 'fall', 10
-                    UNION ALL
-                    SELECT 'fall', 11
-                    UNION ALL
+                    SELECT 'winter' AS season, 1 AS month UNION ALL
+                    SELECT 'winter', 2 UNION ALL
+                    SELECT 'spring', 3 UNION ALL
+                    SELECT 'spring', 4 UNION ALL
+                    SELECT 'spring', 5 UNION ALL
+                    SELECT 'summer', 6 UNION ALL
+                    SELECT 'summer', 7 UNION ALL
+                    SELECT 'summer', 8 UNION ALL
+                    SELECT 'fall', 9 UNION ALL
+                    SELECT 'fall', 10 UNION ALL
+                    SELECT 'fall', 11 UNION ALL
                     SELECT 'winter', 12
                 )
                 SELECT g.genre_name, AVG(m.movie_popularity) AS avg_popularity, SUM(f.revenue) AS total_revenue
-                FROM idorosiner.Movies m
+                FROM Movies m
                 JOIN Seasons s ON MONTH(m.release_date) = s.month
-                JOIN idorosiner.MovieGenres g ON m.movie_id = g.movie_id
-                JOIN idorosiner.MovieFinances f ON m.movie_id = f.movie_id
+                JOIN MovieGenres mg ON m.movie_id = mg.movie_id
+                JOIN Genres g ON mg.genre_id = g.genre_id  -- Join to get genre names
+                JOIN MovieFinances f ON m.movie_id = f.movie_id
                 WHERE s.season = '{season}'
                 AND YEAR(m.release_date) = {year}
                 AND f.revenue >= {min_revenue}
                 GROUP BY g.genre_name
                 ORDER BY avg_popularity DESC
-                LIMIT 5
+                LIMIT 5;
             """
-  
     return query
 
 
@@ -83,9 +72,9 @@ def query_3(movie_name: str):
                 m.runtime, 
                 GROUP_CONCAT(mp.provider_name) AS Available_On
                 FROM 
-                idorosiner.Movies m
+                Movies m
                 LEFT JOIN 
-                idorosiner.MovieProviders mp 
+                MovieProviders mp 
                 ON 
                 m.movie_id = mp.movie_id
                 WHERE 
@@ -109,14 +98,14 @@ def query_4(ranking: int):
     query = f"""
                 WITH filtered_movies AS (
                 SELECT movie_id
-                FROM idorosiner.Movies
+                FROM Movies
                 WHERE vote_average >= {ranking}                
                 )
                 SELECT 
                 mp.provider_name, 
                 COUNT(DISTINCT fm.movie_id) AS Number_of_Unique_Movies
                 FROM filtered_movies fm
-                JOIN idorosiner.MovieProviders mp
+                JOIN MovieProviders mp
                 ON fm.movie_id = mp.movie_id
                 GROUP BY mp.provider_name
                 ORDER BY COUNT(DISTINCT fm.movie_id) DESC
@@ -130,16 +119,13 @@ def query_5(free_text: str, genre: str, date: str, runtime: str):
         print("Input cannot be empty")
         return
     query = f"""
-                select m.title, m.overview, f.revenue, m.vote_average, g.genre_name, m.release_date, m.runtime
-                from idorosiner.Movies m
-                join idorosiner.MovieGenres g
-                on m.movie_id = g.movie_id
-                join idorosiner.MovieFinances f
-                on m.movie_id = f.movie_id
-                where MATCH(m.overview) AGAINST ('{free_text}' in natural language mode)
-                    and g.genre_name = '{genre}' 
-                    and m.release_date >= {date}
-                    and m.runtime > {runtime} """                
-                    
-                    
+                SELECT m.title, m.overview, f.revenue, m.vote_average, g.genre_name, m.release_date, m.runtime
+                FROM Movies m
+                JOIN MovieGenres mg ON m.movie_id = mg.movie_id
+                JOIN Genres g ON mg.genre_id = g.genre_id  -- Join to get genre_name
+                JOIN MovieFinances f ON m.movie_id = f.movie_id
+                WHERE MATCH(m.overview) AGAINST ('{free_text}' IN NATURAL LANGUAGE MODE)
+                AND g.genre_name = '{genre}'
+                AND m.release_date >= {date}
+                AND m.runtime > {runtime} """                                
     return query
