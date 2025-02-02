@@ -9,49 +9,77 @@ API_KEY = 'b65f2cb3c102760ac5d48f8ead6babb4'
 def populate_Movies(connection, movie_id, title, overview, release_date, runtime, movie_popularity, vote_average):
     try:
         cursor = connection.cursor()
-        query = ''' INSERT INTO Movies
+        query = ''' 
+                    INSERT INTO Movies
                     (movie_id, title, overview, release_date, runtime, movie_popularity, vote_average) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s) '''
+                    VALUES (%s, %s, %s, %s, %s, %s, %s) 
+                '''
         record = (movie_id, title, overview, release_date, runtime, movie_popularity, vote_average)
         cursor.execute(query, record)
         connection.commit()
         
     except mysql.connector.Error as e:
         print("Error in populate_Movie(): " + str(e))
-        return False
-    
-    return True
+        connection.rollback()
         
 
-def populate_MovieFinances(connection, movie_id, budget, revenue):
+
+def populate_MovieFinances(connection, movie_id, revenue):
     try:
         cursor = connection.cursor()
-        query = ''' INSERT INTO MovieFinances
-                        (movie_id, budget, revenue, gross_profit) 
-                        VALUES (%s, %s, %s, %s) '''
-        gross_profit = revenue - budget
-        record = (movie_id, budget, revenue, gross_profit)
+        query = ''' 
+                    INSERT INTO MovieFinances
+                    (movie_id, revenue) 
+                    VALUES (%s, %s)
+                '''
+        record = (movie_id, revenue)
         cursor.execute(query, record)
         connection.commit()
     
     except Exception as e:
         print("Error in populate_MovieFinances(): " + str(e))
+        connection.rollback()
 
-      
+
+
+def populate_Genres(connection, genres):
+    cursor = connection.cursor()
+    query = ''' 
+                INSERT INTO Genres (genre_id, genre_name) 
+                VALUES (%s, %s) 
+            '''
+
+    for genre in genres:
+        record = (genre["id"], genre["name"])
+        try:    
+            cursor.execute(query, record)
+            connection.commit()
+        
+        except mysql.connector.Error as e:
+            # ignore errors involving genre duplication
+            if e.errno != errorcode.ER_DUP_ENTRY:
+                print("Error in Genres(): " + str(e))
+                connection.rollback()
+            
+
+
 def populate_MovieGenres(connection, movie_id, genres):
     try:
         cursor = connection.cursor()
-        query = ''' INSERT INTO MovieGenres (movie_id, genre_id, genre_name) 
-                    VALUES (%s, %s, %s) '''
+        query = ''' 
+                    INSERT INTO MovieGenres (movie_id, genre_id) 
+                    VALUES (%s, %s) 
+                '''
 
         for genre in genres:
-            record = (movie_id, genre["id"], genre["name"])
+            record = (movie_id, genre["id"])
             cursor.execute(query, record)
 
         connection.commit()
     
     except mysql.connector.Error as e:
         print("Error in MovieGenres(): " + str(e))
+        connection.rollback()
 
 
 
@@ -61,6 +89,7 @@ def populate_Actors_and_MovieActors(connection, movie_id):
     response = requests.get(url)
     cast = response.json()['cast']
 
+    # Iterate over all members of the cast and identify the actors
     for member in cast:
         if member['known_for_department'] == "Acting":
             actor_id = member['id']
@@ -69,28 +98,37 @@ def populate_Actors_and_MovieActors(connection, movie_id):
             actor_popularity = member['popularity']
             
             try:
-                query = ''' INSERT INTO Actors
+                query = ''' 
+                            INSERT INTO Actors
                             (actor_id, actor_name, actor_gender, actor_popularity) 
-                            VALUES (%s, %s, %s, %s) '''
+                            VALUES (%s, %s, %s, %s) 
+                        '''
                 record = (actor_id, actor_name, actor_gender, actor_popularity)
                 cursor.execute(query, record)
                 connection.commit()
             
             except mysql.connector.Error as e:
-                # ignore errors about actors duplication
+                # ignore errors involving actor duplication
                 if e.errno != errorcode.ER_DUP_ENTRY:
                     print("Error in populate_Actors(): " + str(e))
+                    connection.rollback()
             
             try:
-                query = ''' INSERT INTO MovieActors
+                query = ''' 
+                            INSERT INTO MovieActors
                             (movie_id, actor_id) 
-                            VALUES (%s, %s) '''
+                            VALUES (%s, %s) 
+                        '''
                 record = (movie_id, actor_id)
                 cursor.execute(query, record)
                 connection.commit()
             
             except Exception as e:
-                print("Error in populate_MovieActors(): " + str(e))
+                # ignore errors involving actor duplication
+                if e.errno != errorcode.ER_DUP_ENTRY:
+                    print("Error in populate_MovieActors(): " + str(e))
+                    connection.rollback()
+
 
 
 def populate_MovieProviders(connection, movie_id):
@@ -99,11 +137,13 @@ def populate_MovieProviders(connection, movie_id):
     response = requests.get(url)
     countries = response.json()['results']
     
-    # only inserting movies that are availabe in Israel
+    # only insert movies that are availabe in Israel
     if 'IL' in countries:
-        query = ''' INSERT INTO MovieProviders 
-            (movie_id, provider_name) 
-            VALUES (%s, %s) '''
+        query = ''' 
+                    INSERT INTO MovieProviders 
+                    (movie_id, provider_name) 
+                    VALUES (%s, %s) 
+                '''
             
         for payment_type in ['rent', 'buy', 'flatrate']:
             if payment_type not in countries['IL']:
@@ -117,13 +157,14 @@ def populate_MovieProviders(connection, movie_id):
                 connection.commit()
             
             except Exception as e:
-                # ignore duplication of provider
+                # ignore error involving provider duplication
                 if e.errno != errorcode.ER_DUP_ENTRY:
                     print("Error in populate_MovieProviders(): " + str(e))
+                    connection.rollback()
                     
 
 def populate_tables():
-    max_num_pages = 100
+    max_num_pages = 80
     connection = connect_to_database()
 
     # Populate all other tables
@@ -148,12 +189,13 @@ def populate_tables():
             
             revenue = more_movie_details['revenue']
             runtime = more_movie_details['runtime']
-            budget = more_movie_details['budget']
             genres = more_movie_details['genres']
             
+            # populate all the tables
             populate_Movies(connection, movie_id, title, overview, release_date, runtime, movie_popularity, vote_average)
+            populate_Genres(connection, genres)
+            populate_MovieFinances(connection, movie_id, revenue)
             populate_MovieGenres(connection, movie_id, genres)
-            populate_MovieFinances(connection, movie_id, budget, revenue)
             populate_Actors_and_MovieActors(connection, movie_id)
             populate_MovieProviders(connection, movie_id)
 
