@@ -19,8 +19,7 @@ def check_tables_existence():
 # run examples for query 1
 def run_examples_for_query_1(cursor):
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print("query 1:")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")    
+    print("query 1:")    
     cursor.execute(q.query_1('summer', '2017', 50000))
     rows = cursor.fetchall()
     for row in rows:
@@ -31,7 +30,6 @@ def run_examples_for_query_1(cursor):
 def run_examples_for_query_2(cursor):
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("query 2:")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     cursor.execute(q.query_2('Leonardo DiCaprio'))
     rows = cursor.fetchall()
     for row in rows:
@@ -42,8 +40,6 @@ def run_examples_for_query_2(cursor):
 def run_examples_for_query_3(cursor):
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("query 3:")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    
     cursor.execute(q.query_3('Inception'))
     rows = cursor.fetchall()
     for row in rows:
@@ -54,7 +50,6 @@ def run_examples_for_query_3(cursor):
 def run_examples_for_query_4(cursor):
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("query 4:")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     cursor.execute(q.query_4(8))
     rows = cursor.fetchall()
     for row in rows:
@@ -65,11 +60,11 @@ def run_examples_for_query_4(cursor):
 def run_examples_for_query_5(cursor):
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("query 5:")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     cursor.execute(q.query_5('adventure', 'Fantasy', '2020', '100'))
     rows = cursor.fetchall()
     for row in rows:
         print(row)
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 
 
